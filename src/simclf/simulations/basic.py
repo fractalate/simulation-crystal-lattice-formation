@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from simclf.generators.uniform_points_3d import generate_uniform_points_3d
 from simclf.physics.atom import calculate_equilibrium_spacing
 from simclf.physics.energy import calculate_potential_energy_of_basic_system
+from simclf.writer import Writer
 
 
 # XXX these magic numbers give like a 3 angstrom equilibrium spacing which is in the ballpark for some atomic configurations.
@@ -22,6 +23,15 @@ equilibrium_spacing = calculate_equilibrium_spacing(
     repulsive_power=REPULSIVE_POWER,
 )
 print(f"{equilibrium_spacing=}")
+
+writer = Writer("basic", "1.0.0")
+
+writer.write_object_to_json("config.json", {
+    "number_of_atoms": NUMBER_OF_ATOMS,
+    "attractive_factor": ATTRACTIVE_FACTOR,
+    "repulsive_factor": REPULSIVE_FACTOR, 
+    "repulsive_power": REPULSIVE_POWER,
+})
 
 # XXX math problem: given a XxYxZ space which we'll fill with uniformly sized spheres having radius r,
 # what is that chance that uniformly adding N spheres to the space will produce a configuration with overlapping spheres?
@@ -40,6 +50,8 @@ atom_positions = generate_uniform_points_3d(
     np.array([ simulation_dimension / 2.0,  simulation_dimension / 2.0,  simulation_dimension / 2.0]),
     NUMBER_OF_ATOMS,
 )
+
+writer.write_points_to_csv("initial.csv", atom_positions)
 
 # XXX fuck I hate myself for this...
 class DoItAgain(Exception):
@@ -72,6 +84,17 @@ print(f"{potential_energy_of_system=}")
 step_size = equilibrium_spacing / 20.0
 gradient = np.zeros_like(atom_positions)
 mask = np.zeros_like(atom_positions)
+
+cycle = 0
+def write_step_data_and_advance(atom_positions, potential_energy_of_system):
+    global cycle
+    writer.write_points_to_csv(f"step_{cycle:05d}.csv", atom_positions)
+    writer.write_object_to_json(f"step_{cycle:05d}.metadata.json", {
+        "potential_energy_of_system": potential_energy_of_system,
+    })
+    cycle += 1
+
+write_step_data_and_advance(atom_positions, potential_energy_of_system)
 
 for k in range(40):
     for i in range(atom_positions.shape[0]):
@@ -113,6 +136,8 @@ for k in range(40):
                 print(f"delta={potential_energy_of_system_next - potential_energy_of_system}")
                 atom_positions = atom_positions_next
                 potential_energy_of_system = potential_energy_of_system_next
+
+                write_step_data_and_advance(atom_positions, potential_energy_of_system)
             else:
                 break
 
@@ -127,15 +152,3 @@ ax = fig.add_subplot(projection='3d', proj_type='ortho')
 ax.scatter(xs, ys, zs)  # type: ignore
 
 plt.show()
-
-try:
-    os.stat("out")
-except FileNotFoundError:
-    os.mkdir("out")
-
-sim_stamp = time.strftime("%Y%m%d-%H%M%S")
-
-with open(f"out/basic_output.{sim_stamp}.csv", "w") as fout:
-    for i in range(atom_positions.shape[0]):
-        point = atom_positions[i]
-        fout.write(f"{point[0]},{point[1]},{point[2]}\n")
