@@ -1,5 +1,6 @@
 """
 TODO Write this up better and rename the simulation to something else. Then update README.md.
+TODO Make this output an animation of how the system evolves.
 
 I want to make this simulation and in a conversation with ChatGPT about my troubles with naive simulations using a more classical approach, it recommended me to use an approach which attempts to minimize the potential in the group of atoms. I think I can give this an honest shot, I just need to take inventory of some things I understand:
 

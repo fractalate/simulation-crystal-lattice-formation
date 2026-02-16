@@ -20,3 +20,13 @@ python3 -m simclf.simulations.basic
 ```
 
 This will output files in a directory roughly named like `out/{timestamp}_basic_{version}`.
+
+<!--
+
+## TODO
+
+* Make some tools for analyzing the resulting crystal structure to see how "regular" it is I guess.
+* Make some tools for loading Writer outputs.
+* Rebuild the basic simulation as a class. Make it so the simulation can be continued.
+
+-->
