@@ -1,0 +1,159 @@
+import numpy as np
+
+from simclf.generators.uniform_points_3d import generate_uniform_points_3d
+from simclf.physics.atom import calculate_equilibrium_spacing
+from simclf.physics.energy import calculate_potential_energy_of_basic_system
+from simclf.reader import Reader
+from simclf.typing import Point3DArray
+from simclf.writer import Writer
+
+
+class SimulationGradientDescent():
+    def __init__(
+        self,
+        attractive_factor: float,
+        repulsive_factor: float,
+        repulsive_power: float,
+        atom_positions: Point3DArray,
+        gradient: Point3DArray,
+    ):
+        self.attractive_factor: float = attractive_factor
+        self.repulsive_factor: float = repulsive_factor
+        self.repulsive_power: float = repulsive_power
+        self.atom_positions: Point3DArray = atom_positions
+        self.gradient: Point3DArray = gradient
+        self.potential_energy_of_system = calculate_potential_energy_of_basic_system(
+            atom_positions=self.atom_positions,
+            attractive_factor=self.attractive_factor,
+            repulsive_factor=self.repulsive_factor,
+            repulsive_power=self.repulsive_power,
+        )
+
+    def save_state(self, writer: Writer):
+        writer.write_object_to_json("state.json", {
+            "attractive_factor": self.attractive_factor,
+            "repulsive_factor": self.repulsive_factor,
+            "repulsive_power": self.repulsive_power,
+        }, overwrite=True)
+        writer.write_points_to_csv("state.atom_positions.csv", self.atom_positions, overwrite=True)
+        writer.write_points_to_csv("state.gradient.csv", self.gradient, overwrite=True)
+
+    @staticmethod
+    def load_state(reader: Reader):
+        config = reader.read_object_from_json("state.json")
+        atom_positions = reader.read_points_from_csv("state.atom_positions.csv")
+        gradient = reader.read_points_from_csv("state.gradient.csv")
+        return {
+            **config,
+            "atom_positions": atom_positions,
+            "gradient": gradient,
+        }
+
+    def get_potential_energy_of_system(self):
+        return self.potential_energy_of_system
+
+    def step(self, step_size: float):
+        mask = np.zeros_like(self.atom_positions)
+        for i in range(self.atom_positions.shape[0]):
+            for j in range(self.atom_positions.shape[1]):
+                mask[i][j] = step_size
+                temp0 = calculate_potential_energy_of_basic_system(
+                    atom_positions=self.atom_positions - mask / 2.0,
+                    attractive_factor=self.attractive_factor,
+                    repulsive_factor=self.repulsive_factor,
+                    repulsive_power=self.repulsive_power,
+                )
+                temp1 = calculate_potential_energy_of_basic_system(
+                    atom_positions=self.atom_positions + mask / 2.0,
+                    attractive_factor=self.attractive_factor,
+                    repulsive_factor=self.repulsive_factor,
+                    repulsive_power=self.repulsive_power,
+                )
+                self.gradient[i][j] = temp1 - temp0
+                mask[i][j] = 0
+
+        scale_factor = np.linalg.norm(self.gradient.flatten())
+        if scale_factor > 0.0:
+            perturbation = - self.gradient / scale_factor * step_size
+
+            attempt = 0
+            while True:
+                # March ahead while there are gains.
+                attempt += 1
+                atom_positions_next = self.atom_positions + perturbation
+                potential_energy_of_system_next = calculate_potential_energy_of_basic_system(
+                    atom_positions=atom_positions_next,
+                    attractive_factor=self.attractive_factor,
+                    repulsive_factor=self.repulsive_factor,
+                    repulsive_power=self.repulsive_power,
+                )
+
+                if attempt <= 1 or potential_energy_of_system_next < self.potential_energy_of_system:
+                    self.atom_positions = atom_positions_next
+                    self.potential_energy_of_system = potential_energy_of_system_next
+                else:
+                    break
+
+
+def setup_and_run_simulation():
+    number_of_atoms = 75
+
+    attractive_factor = 3.6e-28
+    repulsive_factor = 1.0e-95
+    repulsive_power = 8.0
+
+    equilibrium_spacing = calculate_equilibrium_spacing(
+        attractive_factor=attractive_factor,
+        repulsive_factor=repulsive_factor,
+        repulsive_power=repulsive_power,
+    )
+    # We'll simulate in a cube, so we roughly cube root N atoms along each axis.
+    # Scale it down so we're really packing things into the space.
+    # The system should expand to reach equilibrium.
+    simulation_dimension = number_of_atoms**(1/3) * (2 * equilibrium_spacing) * .2
+
+    atom_positions = generate_uniform_points_3d(
+        np.array([-simulation_dimension / 2.0, -simulation_dimension / 2.0, -simulation_dimension / 2.0]),
+        np.array([ simulation_dimension / 2.0,  simulation_dimension / 2.0,  simulation_dimension / 2.0]),
+        number_of_atoms,
+    )
+
+    # XXX maybe it's a good idea to make sure the atoms are not too close to each other.
+
+    simulation = SimulationGradientDescent(
+        attractive_factor=attractive_factor,
+        repulsive_factor=repulsive_factor,
+        repulsive_power=repulsive_power,
+        atom_positions=atom_positions,
+        gradient=np.zeros_like(atom_positions)
+    )
+
+    step_size = equilibrium_spacing / 10.0
+
+    def save_step(step_number: int, extra: None | dict = None):
+        nonlocal simulation
+        writer.write_points_to_csv(f"step_{step_number:05d}.csv", simulation.atom_positions)
+        writer.write_object_to_json(f"step_{step_number:05d}.json", {
+            **(extra or {}),
+            "potential_energy_of_system": simulation.get_potential_energy_of_system(),
+        })
+
+    writer = Writer("gradient_descent", "1.0")
+    simulation.save_state(writer)
+    save_step(0)
+
+    for step_number in range(1, 40):
+        potential_energy_of_system_before = simulation.get_potential_energy_of_system()
+
+        simulation.step(step_size)
+        simulation.save_state(writer)
+
+        potential_energy_of_system_after = simulation.get_potential_energy_of_system()
+        change_in_potential_energy = potential_energy_of_system_after - potential_energy_of_system_before
+        save_step(step_number, {
+            "change_in_potential_energy": change_in_potential_energy,
+        })
+
+
+if __name__ == "__main__":
+    setup_and_run_simulation()

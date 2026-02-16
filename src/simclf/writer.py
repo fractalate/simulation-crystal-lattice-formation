@@ -6,18 +6,27 @@ from simclf.typing import Point3DArray, check_point_3d_array
 
 
 class Writer():
-    def __init__(self, simulation_name: str, simulation_version: str):
+    def __init__(
+        self,
+        simulation_name: str,
+        simulation_version: str,
+        output_directory: None | str | Path = None,
+    ):
+
         self.simulation_name: str = simulation_name
         self.simulation_version: str = simulation_version
-        self.simulation_stamp: str = time.strftime("%Y%m%d-%H%M%S")
-
-    def get_output_directory(self):
-        return Path("out") / Path(f"{self.simulation_stamp}_{self.simulation_name}_{self.simulation_version}")
+        if output_directory is None:
+            simulation_stamp: str = time.strftime("%Y%m%d-%H%M%S")
+            self.output_directory: Path = (
+                Path("out") / Path(f"{simulation_stamp}_{self.simulation_name}_{self.simulation_version}")
+            )
+        else:
+            self.output_directory: Path = Path(output_directory)
 
     def ensure_output_directory_exists(self):
-        output_directory = self.get_output_directory()
+        output_directory = self.output_directory
         if not output_directory.is_dir():
-            output_directory.mkdir()  # TODO do I need an explicit mask?
+            output_directory.mkdir(parents=True)  # TODO do I need an explicit mask?
         return output_directory
 
     def write_points_to_csv(self, file_name: str | Path, points: Point3DArray, overwrite: bool = False):
