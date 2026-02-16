@@ -30,7 +30,7 @@ print(f"{equilibrium_spacing=}")
 
 # We'll simulate in a cube, so we roughly cube root N atoms along each axis.
 # Scale with some fudge so it's less likely atoms will touch.
-simulation_dimension = 1.75 * NUMBER_OF_ATOMS**(1/3) * (2 * equilibrium_spacing)
+simulation_dimension = 1.0 * NUMBER_OF_ATOMS**(1/3) * (2 * equilibrium_spacing) * .2
 
 atom_positions = generate_uniform_points_3d(
     np.array([-simulation_dimension / 2.0, -simulation_dimension / 2.0, -simulation_dimension / 2.0]),
@@ -47,7 +47,7 @@ while True:
         for i in range(atom_positions.shape[0] - 1):
             for j in range(i + 1, atom_positions.shape[0]):
                 distance = np.linalg.norm(atom_positions[i] - atom_positions[j])
-                if distance < equilibrium_spacing:
+                if distance < equilibrium_spacing / 5.0: # XXX kindof let the overlap, but you don't want too much since repulsive force is so powerful
                     atom_positions[j] = atom_positions[atom_positions.shape[0] - 1]
                     atom_positions = atom_positions[:-1,]
                     raise DoItAgain()
@@ -70,9 +70,6 @@ step_size = equilibrium_spacing / 20.0
 gradient = np.zeros_like(atom_positions)
 mask = np.zeros_like(atom_positions)
 
-# TODO Is there something wrong with this gradient descent?
-# It either converges so slowly it's useless or it's just wrong.
-# I think maybe I could try to make sure each step of the simulation moves some minimum amount so that it forces faster convergence maybe?
 for k in range(20):
     for i in range(atom_positions.shape[0]):
         for j in range(atom_positions.shape[1]):
@@ -83,22 +80,35 @@ for k in range(20):
                 repulsive_factor=REPULSIVE_FACTOR,
                 repulsive_power=REPULSIVE_POWER,
             )
-            gradient[i][j] = (temp - potential_energy_of_system) / step_size
+            gradient[i][j] = temp - potential_energy_of_system
             mask[i][j] = 0
 
-    atom_positions = atom_positions - gradient * step_size
+    most_position = gradient.max()
+    most_negative = gradient.min()
 
-    potential_energy_of_system_next = calculate_potential_energy_of_basic_system(
-        atom_positions=atom_positions,
-        attractive_factor=ATTRACTIVE_FACTOR,
-        repulsive_factor=REPULSIVE_FACTOR,
-        repulsive_power=REPULSIVE_POWER,
-    )
+    scale_factor = np.linalg.norm(gradient.flatten())
+    if scale_factor > 0.0:
+        perturbation = - gradient / scale_factor * equilibrium_spacing / (k + 1)
 
-    print(f"{potential_energy_of_system_next=}")
-    print(f"delta={potential_energy_of_system_next - potential_energy_of_system}")
+        attempt = 0
+        while True:
+            # March ahead while there are gains.
+            attempt += 1
+            atom_positions_next = atom_positions + perturbation
+            potential_energy_of_system_next = calculate_potential_energy_of_basic_system(
+                atom_positions=atom_positions_next,
+                attractive_factor=ATTRACTIVE_FACTOR,
+                repulsive_factor=REPULSIVE_FACTOR,
+                repulsive_power=REPULSIVE_POWER,
+            )
 
-    potential_energy_of_system = potential_energy_of_system_next
+            if attempt <= 1 or potential_energy_of_system_next < potential_energy_of_system:
+                print(f"{potential_energy_of_system_next=}")
+                print(f"delta={potential_energy_of_system_next - potential_energy_of_system}")
+                atom_positions = atom_positions_next
+                potential_energy_of_system = potential_energy_of_system_next
+            else:
+                break
 
 #print(atom_positions)
 
