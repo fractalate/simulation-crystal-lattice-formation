@@ -1,3 +1,6 @@
+import os
+import time
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -124,3 +127,15 @@ ax = fig.add_subplot(projection='3d', proj_type='ortho')
 ax.scatter(xs, ys, zs)  # type: ignore
 
 plt.show()
+
+try:
+    os.stat("out")
+except FileNotFoundError:
+    os.mkdir("out")
+
+sim_stamp = time.strftime("%Y%m%d-%H%M%S")
+
+with open(f"out/basic_output.{sim_stamp}.csv", "w") as fout:
+    for i in range(atom_positions.shape[0]):
+        point = atom_positions[i]
+        fout.write(f"{point[0]},{point[1]},{point[2]}\n")
