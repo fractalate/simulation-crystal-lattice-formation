@@ -142,7 +142,7 @@ def setup_and_run_simulation():
     simulation.save_state(writer)
     save_step(0)
 
-    for step_number in range(1, 40):
+    for step_number in range(1, 100):
         potential_energy_of_system_before = simulation.get_potential_energy_of_system()
 
         simulation.step(step_size)

@@ -12,19 +12,23 @@ class Reader():
         self.input_directory = Path(input_directory)
 
     def read_points_from_csv(self, file_name: str | Path) -> Point3DArray:
-        input_path = self.input_directory / Path(file_name)
+        return read_points_from_csv(self.input_directory / Path(file_name))
 
-        points = []
-
-        with open(input_path, "r") as fin:
-            for x, y, z in csv.reader(fin):
-                points.append([float(x), float(y), float(z)])
-        
-        return np.array(points)
 
     def read_object_from_json(self, file_name: str | Path) -> dict:
-        input_path = self.input_directory / Path(file_name)
+        return read_object_from_json(self.input_directory / Path(file_name))
 
-        with open(input_path, "r") as fin:
-            return json.loads(fin.read())
 
+def read_points_from_csv(file_name: str | Path) -> Point3DArray:
+    points = []
+
+    with open(file_name, "r") as fin:
+        for x, y, z in csv.reader(fin):
+            points.append([float(x), float(y), float(z)])
+    
+    return np.array(points)
+
+
+def read_object_from_json(file_name: str | Path) -> dict:
+    with open(file_name, "r") as fin:
+        return json.loads(fin.read())
