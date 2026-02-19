@@ -110,7 +110,8 @@ def setup_and_run_simulation():
     # We'll simulate in a cube, so we roughly cube root N atoms along each axis.
     # Scale it down so we're really packing things into the space.
     # The system should expand to reach equilibrium.
-    simulation_dimension = number_of_atoms**(1/3) * (2 * equilibrium_spacing) * .2
+    simulation_dimension = number_of_atoms**(1/3) * (2 * equilibrium_spacing) * .5
+    step_size = equilibrium_spacing / 10.0
 
     atom_positions = generate_uniform_points_3d(
         np.array([-simulation_dimension / 2.0, -simulation_dimension / 2.0, -simulation_dimension / 2.0]),
@@ -128,28 +129,35 @@ def setup_and_run_simulation():
         gradient=np.zeros_like(atom_positions)
     )
 
-    step_size = equilibrium_spacing / 10.0
+    writer = Writer("gradient_descent", "1.0")
+    writer.write_object_to_json("config.json", {
+        "equilibrium_spacing": equilibrium_spacing,
+        "step_size": step_size,
+        "simulation_dimension": simulation_dimension,
+    })
 
     def save_step(step_number: int, extra: None | dict = None):
         nonlocal simulation
+        nonlocal writer
         writer.write_points_to_csv(f"step_{step_number:05d}.csv", simulation.atom_positions)
         writer.write_object_to_json(f"step_{step_number:05d}.json", {
             **(extra or {}),
             "potential_energy_of_system": simulation.get_potential_energy_of_system(),
         })
 
-    writer = Writer("gradient_descent", "1.0")
     simulation.save_state(writer)
     save_step(0)
 
     for step_number in range(1, 100):
         potential_energy_of_system_before = simulation.get_potential_energy_of_system()
 
-        simulation.step(step_size)
-        simulation.save_state(writer)
+        print(f"{step_number=}")
+        simulation.step(step_size / ((step_number // 10) + 1))
 
         potential_energy_of_system_after = simulation.get_potential_energy_of_system()
         change_in_potential_energy = potential_energy_of_system_after - potential_energy_of_system_before
+
+        simulation.save_state(writer)
         save_step(step_number, {
             "change_in_potential_energy": change_in_potential_energy,
         })
