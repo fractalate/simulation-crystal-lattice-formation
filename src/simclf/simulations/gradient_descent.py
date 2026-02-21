@@ -22,7 +22,7 @@ class SimulationGradientDescent():
         self.repulsive_power: float = repulsive_power
         self.atom_positions: Point3DArray = atom_positions
         self.gradient: Point3DArray = gradient
-        self.potential_energy_of_system = calculate_potential_energy_of_basic_system(
+        self.potential_energy_of_system: float = calculate_potential_energy_of_basic_system(
             atom_positions=self.atom_positions,
             attractive_factor=self.attractive_factor,
             repulsive_factor=self.repulsive_factor,
@@ -95,8 +95,15 @@ class SimulationGradientDescent():
                     break
 
 
-def setup_and_run_simulation():
-    number_of_atoms = 75
+def setup_and_run_simulation(
+    number_of_atoms: int = 20,
+    number_of_steps: int = 100,
+):
+    if number_of_atoms < 1:
+        raise Exception(f"invalid {number_of_atoms=}. must be 1 or more.")
+
+    if number_of_steps < 1:
+        raise Exception(f"invalid {number_of_steps=}. must be 1 or more.")
 
     attractive_factor = 3.6e-28
     repulsive_factor = 1.0e-95
@@ -132,8 +139,10 @@ def setup_and_run_simulation():
     writer = Writer("gradient_descent", "1.0")
     writer.write_object_to_json("config.json", {
         "equilibrium_spacing": equilibrium_spacing,
-        "step_size": step_size,
+        "number_of_atoms": number_of_atoms,
+        "number_of_steps": number_of_steps,
         "simulation_dimension": simulation_dimension,
+        "step_size": step_size,
     })
 
     def save_step(step_number: int, extra: None | dict = None):
@@ -148,7 +157,7 @@ def setup_and_run_simulation():
     simulation.save_state(writer)
     save_step(0)
 
-    for step_number in range(1, 100):
+    for step_number in range(1, number_of_steps):
         potential_energy_of_system_before = simulation.get_potential_energy_of_system()
 
         print(f"{step_number=}")
@@ -164,4 +173,16 @@ def setup_and_run_simulation():
 
 
 if __name__ == "__main__":
-    setup_and_run_simulation()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--atoms", "--number_of_atoms", "--number-of-atoms", dest="number_of_atoms", type=int)
+    parser.add_argument("--steps", "--number_of_steps", "--number-of-steps", dest="number_of_steps", type=int)
+
+    args = {}
+    for k, v in vars(parser.parse_args()).items():
+        if v is not None:
+            args[k] = v
+
+    setup_and_run_simulation(**args)
