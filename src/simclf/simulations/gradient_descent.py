@@ -137,6 +137,9 @@ def setup_and_run_simulation(
     )
 
     writer = Writer("gradient_descent", "1.0")
+
+    print(f"output will be written to {writer.output_directory}")
+
     writer.write_object_to_json("config.json", {
         "equilibrium_spacing": equilibrium_spacing,
         "number_of_atoms": number_of_atoms,
@@ -170,6 +173,8 @@ def setup_and_run_simulation(
         save_step(step_number, {
             "change_in_potential_energy": change_in_potential_energy,
         })
+
+    print(f"see output in {writer.output_directory}")
 
 
 if __name__ == "__main__":
