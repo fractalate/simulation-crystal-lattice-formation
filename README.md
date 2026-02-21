@@ -19,18 +19,33 @@ pip install --editable .
 
 ## Running Basic Simulation
 
+Run the simulation
+
 ```bash
-python3 -m simclf.simulations.basic
+python3 -m simclf.simulations.gradient_descent
 ```
 
-This will output files in a directory roughly named like `out/{timestamp}_basic_{version}`.
+You should see output like this
+
+```
+...
+step_number=98
+step_number=99
+see output in out/20260220-212840_gradient_descent_1.0
+```
+
+Then you can make an animation of the lattice formation
+
+```bash
+python3 -m simclf.tools.plot_lattice --edge-method=experimental out/20260220-212840_gradient_descent_1.0/step_00*.csv
+```
 
 <!--
 
 ## TODO
 
 * Make some tools for analyzing the resulting crystal structure to see how "regular" it is I guess.
-* Make some tools for loading Writer outputs.
-* Rebuild the basic simulation as a class. Make it so the simulation can be continued.
+* Destroy basic simulation.
+* Make an actual gradient descent implementation (don't tell anyone I fudged it).
 
 -->
