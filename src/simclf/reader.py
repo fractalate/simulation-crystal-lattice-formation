@@ -14,9 +14,11 @@ class Reader():
     def read_points_from_csv(self, file_name: str | Path) -> Point3DArray:
         return read_points_from_csv(self.input_directory / Path(file_name))
 
-
     def read_object_from_json(self, file_name: str | Path) -> dict:
         return read_object_from_json(self.input_directory / Path(file_name))
+
+    def read_document(self, file_name: str | Path) -> str:
+        return read_document(self.input_directory / Path(file_name))
 
 
 def read_points_from_csv(file_name: str | Path) -> Point3DArray:
@@ -28,7 +30,10 @@ def read_points_from_csv(file_name: str | Path) -> Point3DArray:
     
     return np.array(points)
 
-
 def read_object_from_json(file_name: str | Path) -> dict:
     with open(file_name, "r") as fin:
         return json.loads(fin.read())
+
+def read_document(file_name: str | Path) -> str:
+    with open(file_name, "r") as fin:
+        return fin.read()

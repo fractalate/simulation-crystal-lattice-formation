@@ -26,7 +26,7 @@ class Writer():
     def ensure_output_directory_exists(self):
         output_directory = self.output_directory
         if not output_directory.is_dir():
-            output_directory.mkdir(parents=True)  # TODO do I need an explicit mask?
+            output_directory.mkdir(parents=True)
         return output_directory
 
     def write_points_to_csv(self, file_name: str | Path, points: Point3DArray, overwrite: bool = False):
@@ -52,3 +52,16 @@ class Writer():
         with open(file_path, "w") as fout:
             fout.write(json.dumps(obj, indent=2))
             fout.write("\n")
+
+    def write_document(self, file_name: str | Path, text: str, overwrite: bool = False):
+        file_path = self.ensure_output_directory_exists() / Path(file_name)
+
+        if not overwrite:
+            if file_path.exists():
+                raise FileExistsError(file_path)  # XXX is this valid?
+
+        with open(file_path, "w") as fout:
+            if text:
+                fout.write(text)
+                if text[-1] not in "\r\n":
+                    fout.write("\n")
