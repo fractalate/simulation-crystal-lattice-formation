@@ -1,5 +1,8 @@
 # Simulation of Crystal Lattice Formation
 
+![Example Animation of Atoms Arranging into a Regular Structure](./assets/example.gif)
+
+
 ## Setup
 
 ```bash
@@ -12,6 +15,7 @@ source .venv/bin/activate
 # Install dependencies.
 pip install --editable .
 ```
+
 
 ## Running Basic Simulation
 
