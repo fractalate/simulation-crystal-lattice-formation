@@ -138,7 +138,7 @@ def setup_and_run_simulation(
 
     writer = Writer("gradient_descent", "1.0")
 
-    print(f"output will be written to {writer.output_directory}")
+    writer.info(f"output will be written to {writer.output_directory}")
 
     writer.write_object_to_json("config.json", {
         "equilibrium_spacing": equilibrium_spacing,
@@ -163,7 +163,7 @@ def setup_and_run_simulation(
     for step_number in range(1, number_of_steps):
         potential_energy_of_system_before = simulation.get_potential_energy_of_system()
 
-        print(f"{step_number=}")
+        writer.info(f"{step_number=}")
         simulation.step(step_size / ((step_number // 10) + 1))
 
         potential_energy_of_system_after = simulation.get_potential_energy_of_system()
@@ -174,7 +174,7 @@ def setup_and_run_simulation(
             "change_in_potential_energy": change_in_potential_energy,
         })
 
-    print(f"see output in {writer.output_directory}")
+    writer.info(f"see output in {writer.output_directory}")
 
 
 if __name__ == "__main__":

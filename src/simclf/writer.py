@@ -1,8 +1,14 @@
 import json
-from pathlib import Path
+import sys
 import time
+from datetime import datetime
+from io import TextIOWrapper
+from pathlib import Path
+from typing import Dict
 
 from simclf.typing import Point3DArray, check_point_3d_array
+
+WRITER_OUTPUT_FILE_NAME_DEFAULT = "output.log"
 
 
 class Writer():
@@ -11,10 +17,12 @@ class Writer():
         simulation_name: str,
         simulation_version: str,
         output_directory: None | str | Path = None,
+        output_file_name: None | str | Path = None,
     ):
 
         self.simulation_name: str = simulation_name
         self.simulation_version: str = simulation_version
+
         if output_directory is None:
             simulation_stamp: str = time.strftime("%Y%m%d-%H%M%S")
             self.output_directory: Path = (
@@ -22,6 +30,13 @@ class Writer():
             )
         else:
             self.output_directory: Path = Path(output_directory)
+
+        if output_file_name:
+            self.output_file_name: Path = Path(output_file_name)
+        else:
+            self.output_file_name: Path = Path(WRITER_OUTPUT_FILE_NAME_DEFAULT)
+
+        self.text_streams: Dict[Path, TextIOWrapper] = {}
 
     def ensure_output_directory_exists(self):
         output_directory = self.output_directory
@@ -65,3 +80,61 @@ class Writer():
                 fout.write(text)
                 if text[-1] not in "\r\n":
                     fout.write("\n")
+
+    def _get_text_stream(self, file_name: str | Path) -> TextIOWrapper:
+        file_path = self.ensure_output_directory_exists() / Path(file_name)
+
+        text_stream = self.text_streams.get(file_path)
+
+        if text_stream is not None:
+            return text_stream
+
+        text_stream = open(file_path, "at")
+        self.text_streams[file_path] = text_stream
+
+        return text_stream
+
+    def write_to_text_stream(self, file_name: str | Path, text: str):
+        stream = self._get_text_stream(file_name)
+
+        stream.write(text)
+        stream.flush()
+
+    def _write_to_text_stream_and_stdout(self, file_name: str | Path, text: str):
+        self.write_to_text_stream(file_name, text)
+        sys.stdout.write(text)
+
+    def debug(self, message):
+        # TODO Maybe make it so you can disable debug output at least.
+        self._write_to_text_stream_and_stdout(
+            self.output_file_name,
+            _format_log_message("DEBUG", message),
+        )
+
+    def info(self, message):
+        self._write_to_text_stream_and_stdout(
+            self.output_file_name,
+            _format_log_message("INFO", message),
+        )
+
+    def warn(self, message):
+        self._write_to_text_stream_and_stdout(
+            self.output_file_name,
+            _format_log_message("WARN", message),
+        )
+
+    def error(self, message):
+        self._write_to_text_stream_and_stdout(
+            self.output_file_name,
+            _format_log_message("ERROR", message),
+        )
+
+
+def _now() -> datetime:
+    # TODO Make this timezone configurable or something. Maybe pull it into Writer class.
+    return datetime.now().astimezone()
+
+
+def _format_log_message(level: str, message: str):
+    timestamp = _now().strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+    return f"{timestamp} - {level} - {message}\n"
