@@ -1,7 +1,7 @@
 import json
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from io import TextIOWrapper
 from pathlib import Path
 from typing import Dict
@@ -18,6 +18,7 @@ class Writer():
         simulation_version: str,
         output_directory: None | str | Path = None,
         output_file_name: None | str | Path = None,
+        is_debug_enabled: None | bool = None,
     ):
 
         self.simulation_name: str = simulation_name
@@ -31,12 +32,18 @@ class Writer():
         else:
             self.output_directory: Path = Path(output_directory)
 
-        if output_file_name:
-            self.output_file_name: Path = Path(output_file_name)
-        else:
+        if output_file_name is None:
             self.output_file_name: Path = Path(WRITER_OUTPUT_FILE_NAME_DEFAULT)
+        else:
+            self.output_file_name: Path = Path(output_file_name)
+
+        if is_debug_enabled is None:
+            self.is_debug_enabled = False
+        else:
+            self.is_debug_enabled = is_debug_enabled
 
         self.text_streams: Dict[Path, TextIOWrapper] = {}
+        self.timezone: None | timezone = None
 
     def ensure_output_directory_exists(self):
         output_directory = self.output_directory
@@ -104,37 +111,36 @@ class Writer():
         self.write_to_text_stream(file_name, text)
         sys.stdout.write(text)
 
+    def _now(self) -> datetime:
+        if self.timezone is None:
+            return datetime.now().astimezone()
+        return datetime.now(tz=self.timezone)
+
+    def _format_log_message(self, level: str, message: str):
+        timestamp = self._now().strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+        return f"{timestamp} - {level} - {message}\n"
+
     def debug(self, message):
-        # TODO Maybe make it so you can disable debug output at least.
-        self._write_to_text_stream_and_stdout(
-            self.output_file_name,
-            _format_log_message("DEBUG", message),
-        )
+        if self.is_debug_enabled:
+            self._write_to_text_stream_and_stdout(
+                self.output_file_name,
+                self._format_log_message("DEBUG", message),
+            )
 
     def info(self, message):
         self._write_to_text_stream_and_stdout(
             self.output_file_name,
-            _format_log_message("INFO", message),
+            self._format_log_message("INFO", message),
         )
 
     def warn(self, message):
         self._write_to_text_stream_and_stdout(
             self.output_file_name,
-            _format_log_message("WARN", message),
+            self._format_log_message("WARN", message),
         )
 
     def error(self, message):
         self._write_to_text_stream_and_stdout(
             self.output_file_name,
-            _format_log_message("ERROR", message),
+            self._format_log_message("ERROR", message),
         )
-
-
-def _now() -> datetime:
-    # TODO Make this timezone configurable or something. Maybe pull it into Writer class.
-    return datetime.now().astimezone()
-
-
-def _format_log_message(level: str, message: str):
-    timestamp = _now().strftime("%Y-%m-%dT%H:%M:%S.%f%z")
-    return f"{timestamp} - {level} - {message}\n"

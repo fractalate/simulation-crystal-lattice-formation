@@ -7,7 +7,7 @@ import numpy.typing as npt
 # indicating the disposition of values. Use check functions if you need to validate that values
 # are indeed the correct type and shape.
 Point3D = npt.NDArray[np.float64]
-Point3DArray = npt.NDArray[np.float64]  # TODO: is this really a good way to represent points?
+Point3DArray = npt.NDArray[np.float64]
 Lattice3D = npt.NDArray[np.float64]
 
 def check_point_3d(point: Point3D)-> TypeGuard[Point3D]:

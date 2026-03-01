@@ -45,7 +45,6 @@ python3 -m simclf.tools.plot_lattice --edge-method=experimental out/20260220-212
 ## TODO
 
 * Make some tools for analyzing the resulting crystal structure to see how "regular" it is I guess.
-* Destroy basic simulation.
 * Make an actual gradient descent implementation (don't tell anyone I fudged it).
 
 -->
