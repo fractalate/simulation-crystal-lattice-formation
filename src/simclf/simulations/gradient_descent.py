@@ -1,5 +1,6 @@
 import numpy as np
 
+from simclf.algorithm.gradient import calculate_gradient
 from simclf.generators.uniform_points_3d import generate_uniform_points_3d
 from simclf.physics.atom import calculate_equilibrium_spacing
 from simclf.physics.energy import calculate_potential_energy_of_basic_system
@@ -53,24 +54,19 @@ class SimulationGradientDescent():
         return self.potential_energy_of_system
 
     def step(self, step_size: float):
-        mask = np.zeros_like(self.atom_positions)
-        for i in range(self.atom_positions.shape[0]):
-            for j in range(self.atom_positions.shape[1]):
-                mask[i][j] = step_size
-                temp0 = calculate_potential_energy_of_basic_system(
-                    atom_positions=self.atom_positions - mask / 2.0,
-                    attractive_factor=self.attractive_factor,
-                    repulsive_factor=self.repulsive_factor,
-                    repulsive_power=self.repulsive_power,
-                )
-                temp1 = calculate_potential_energy_of_basic_system(
-                    atom_positions=self.atom_positions + mask / 2.0,
-                    attractive_factor=self.attractive_factor,
-                    repulsive_factor=self.repulsive_factor,
-                    repulsive_power=self.repulsive_power,
-                )
-                self.gradient[i][j] = temp1 - temp0
-                mask[i][j] = 0
+        def objective_function(atom_positions):
+            return calculate_potential_energy_of_basic_system(
+                atom_positions=atom_positions,
+                attractive_factor=self.attractive_factor,
+                repulsive_factor=self.repulsive_factor,
+                repulsive_power=self.repulsive_power,
+            )
+        self.gradient = calculate_gradient(
+            self.atom_positions,
+            objective_function,
+            step_size,
+            gradient=self.gradient,
+        )
 
         scale_factor = np.linalg.norm(self.gradient.flatten())
         if scale_factor > 0.0:
@@ -136,7 +132,7 @@ def setup_and_run_simulation(
         gradient=np.zeros_like(atom_positions)
     )
 
-    writer = Writer("gradient_descent", "1.0")
+    writer = Writer("gradient_descent", "1.1")
 
     writer.info(f"output will be written to {writer.output_directory}")
 
