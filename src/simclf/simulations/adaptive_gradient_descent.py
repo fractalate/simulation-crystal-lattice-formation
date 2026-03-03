@@ -9,7 +9,7 @@ from simclf.typing import Point3DArray
 from simclf.writer import Writer
 
 
-class SimulationGradientDescent():
+class SimulationAdaptiveGradientDescent():
     def __init__(
         self,
         attractive_factor: float,
@@ -146,7 +146,7 @@ def setup_and_run_simulation(
 
     # XXX maybe it's a good idea to make sure the atoms are not too close to each other.
 
-    simulation = SimulationGradientDescent(
+    simulation = SimulationAdaptiveGradientDescent(
         attractive_factor=attractive_factor,
         repulsive_factor=repulsive_factor,
         repulsive_power=repulsive_power,
