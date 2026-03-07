@@ -32,6 +32,30 @@ def calculate_potential_energy_of_basic_system(
     total = np.float64(0.0)
 
     for i in range(number_of_atoms - 1):
+        displacements = atom_positions[i+1:] - atom_positions[i]
+        distances = np.linalg.norm(displacements, axis=1)
+
+        attractive_potentials = -attractive_factor / distances
+        repulsive_potentials = repulsive_factor / distances**repulsive_power
+
+        total += (attractive_potentials + repulsive_potentials).sum()
+
+    return total
+
+
+# A less efficient version of calculate_potential_energy_of_basic_system() for reference.
+def calculate_potential_energy_of_basic_system_reference(
+    atom_positions: Point3DArray,
+    attractive_factor: float,
+    repulsive_factor: float,
+    repulsive_power: float,
+) -> np.float64:
+    check_point_3d_array(atom_positions)
+    number_of_atoms = atom_positions.shape[0]
+
+    total = np.float64(0.0)
+
+    for i in range(number_of_atoms - 1):
         for j in range(i + 1, number_of_atoms):
             distance = np.linalg.norm(atom_positions[i] - atom_positions[j])
 
