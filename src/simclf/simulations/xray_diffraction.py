@@ -2,13 +2,17 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from functools import lru_cache
-from simclf.typing import Point3D, Point3DArray
+from simclf.typing import Point3D, Point3DArray, Scalers
 
 TWO_PI = np.pi * 2.0
 
 
 def calculate_distance_to_reference_plane(position: Point3D, plane_normal: Point3D) -> float:
     return np.abs(np.dot(position, plane_normal)) / np.linalg.norm(plane_normal)
+
+
+def calculate_distances_to_reference_plane(positions: Point3DArray, plane_normal: Point3D) -> Scalers:
+    return np.abs(positions @ plane_normal) / np.linalg.norm(plane_normal)
 
 
 def measure_single_atom(
@@ -25,6 +29,22 @@ def measure_single_atom(
     return measurement_at_atom * np.cos((distance_emitter_to_atom + distance_atom_to_detector) / wavelength * 2 * np.pi + phase)
 
 
+def measure_multiple_atoms(
+    wavelength: float,
+    phase: float,
+    diffraction_angle: float,
+    atom_positions: Point3DArray,
+):
+    detector_normal = np.array([np.cos(diffraction_angle), 0.0, np.sin(diffraction_angle)])
+    emitter_normal = np.array([np.cos(diffraction_angle), 0.0, -np.sin(diffraction_angle)])
+    distances_emitter_to_atom = calculate_distances_to_reference_plane(atom_positions, emitter_normal)
+    measurement_at_atom = np.cos(distances_emitter_to_atom / wavelength * 2 * np.pi + phase)
+    distances_atom_to_detector = calculate_distances_to_reference_plane(atom_positions, detector_normal)
+    return np.sum(
+        measurement_at_atom * np.cos((distances_emitter_to_atom + distances_atom_to_detector) / wavelength * 2 * np.pi + phase)
+    )
+
+
 class XRayDiffraction():
     def __init__(
         self,
@@ -38,10 +58,7 @@ class XRayDiffraction():
         phase: float,
         diffraction_angle: float,
     ) -> float:
-        total = 0.0
-        for i in range(self.atom_positions.shape[0]):
-            total += measure_single_atom(wavelength, phase, diffraction_angle, self.atom_positions[i])
-        return total
+        return measure_multiple_atoms(wavelength, phase, diffraction_angle, self.atom_positions)
 
 
 from simclf.reader import Reader
