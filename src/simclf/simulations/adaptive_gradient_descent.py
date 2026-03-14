@@ -60,6 +60,7 @@ class SimulationAdaptiveGradientDescent():
             perturbation = - self.gradient / scale_factor * step_size
 
             attempt = 0
+            reductions = 0
             while True:
                 # March ahead while there are gains.
                 attempt += 1
@@ -71,9 +72,15 @@ class SimulationAdaptiveGradientDescent():
                     repulsive_power=self.repulsive_power,
                 )
 
-                if attempt <= 1 or potential_energy_of_system_next < self.potential_energy_of_system:
+                if potential_energy_of_system_next < self.potential_energy_of_system:
                     self.atom_positions = atom_positions_next
                     self.potential_energy_of_system = potential_energy_of_system_next
+                elif reductions < 10:
+                    perturbation /= 2.0
+                    reductions += 1
+                    attempt -= 1
+                elif attempt <= 1:
+                    break
                 else:
                     break
 
@@ -154,7 +161,7 @@ def setup_and_run_simulation(
         gradient=np.zeros_like(atom_positions)
     )
 
-    writer = Writer("adaptive_gradient_descent", "1.0")
+    writer = Writer("adaptive_gradient_descent", "1.1")
 
     writer.info(f"output will be written to {writer.output_directory}")
 
